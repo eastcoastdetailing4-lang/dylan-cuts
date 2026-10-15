@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cut Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#C8242F">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>Dylan's Cut Log</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,700;112,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone-width column. Money summary on top, add-a-cut form, then the day-by-day log. Fixed bottom tabs. */
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --ink:#131A2B; --muted:#5C667A; --line:#D8DDE7;
+  --accent:#C8242F; --on-accent:#FFFFFF; --blue:#1F4FBF; --good:#1B7F4B; --chip:#E8ECF3;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1320; --surface:#171E2F; --ink:#EEF1F7; --muted:#9AA5BA; --line:#2A3349;
+  --accent:#F0525C; --on-accent:#16090B; --blue:#8AA9FF; --good:#4CC38A; --chip:#222B40; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0E1320; --surface:#171E2F; --ink:#EEF1F7; --muted:#9AA5BA; --line:#2A3349;
+  --accent:#F0525C; --on-accent:#16090B; --blue:#8AA9FF; --good:#4CC38A; --chip:#222B40; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.4}
+.wrap{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:18px 110px;display:flex;flex-direction:column;gap:18px}
+h1{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:1.7rem;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-stretch:112%;font-weight:700;font-size:1.05rem;margin:0}
+.sub{color:var(--muted);font-size:.9rem;margin:2px 0 0}
+.pole{height:8px;border-radius:4px;border:1px solid var(--line);
+  background:repeating-linear-gradient(-45deg,var(--accent) 0 10px,var(--surface) 10px 20px,var(--blue) 20px 30px,var(--surface) 30px 40px)}
+.num{font-variant-numeric:tabular-nums}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.stat b{display:block;font-family:var(--display);font-stretch:112%;font-size:1.3rem;font-weight:800;margin-top:4px}
+.stat span.c{font-size:.82rem;color:var(--muted)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:5px;flex:1 1 120px;min-width:0}
+input,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
+textarea{min-height:90px;font-size:.85rem}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-weight:600;font-size:.9rem;padding:9px 13px;border-radius:999px;border:1px solid var(--line);background:var(--chip);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn{font:inherit;font-weight:700;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:13px 16px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);flex:1}
+.btn.small{padding:8px 12px;font-size:.88rem;font-weight:600}
+.err{color:var(--accent);font-size:.9rem;font-weight:600}
+
+.banner{background:var(--chip);border:1px dashed var(--muted);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:.9rem}
+.day{display:flex;flex-direction:column;gap:8px}
+.dayhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-inline:2px}
+.dayhead span{color:var(--muted);font-size:.88rem}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item .main{flex:1;min-width:0}
+.item .who{font-weight:700;overflow-wrap:anywhere}
+.item .meta{color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.item .amt{font-weight:700;text-align:right;white-space:nowrap}
+.item .amt small{display:block;font-weight:500;color:var(--good);font-size:.8rem}
+.icon{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:9px;padding:7px 10px;font-size:.82rem;font-weight:600;cursor:pointer}
+.empty{color:var(--muted);text-align:center;padding:26px 10px}
+.tag{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--muted);color:var(--muted);border-radius:6px;padding:1px 5px;margin-left:6px}
+
+.bar{height:14px;border-radius:999px;background:var(--chip);overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:var(--good);width:0}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.kv:first-of-type{border-top:0}
+
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav div{display:flex;width:100%;max-width:520px}
+nav button{flex:1;font:inherit;font-weight:700;font-size:.92rem;background:none;border:0;color:var(--muted);padding:15px 6px;cursor:pointer;border-top:3px solid transparent}
+nav button[aria-current="page"]{color:var(--ink);border-top-color:var(--accent)}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px));max-width:488px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:600}
+.toast button{font:inherit;font-weight:800;background:none;border:0;color:var(--bg);text-decoration:underline;cursor:pointer}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <h1>Dylan's Cut Log</h1>
+    <p class="sub" id="todayLine"></p>
+  </header>
+  <div class="pole" aria-hidden="true"></div>
+
+  <!-- CUTS TAB -->
+  <section id="tab-cuts" style="display:contents">
+    <div class="stats" id="stats"></div>
+
+    <form class="card" id="cutForm" novalidate>
+      <h2 id="formTitle">Add a cut</h2>
+      <div class="field">
+        <label class="label" for="client">Client</label>
+        <input id="client" list="clientList" autocomplete="off" placeholder="Name">
+        <datalist id="clientList"></datalist>
+      </div>
+      <div class="field">
+        <span class="label">Service</span>
+        <div class="chips" id="svcChips"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label class="label" for="price">Price $</label><input id="price" inputmode="decimal" placeholder="0"></div>
+        <div class="field"><label class="label" for="tip">Tip $</label><input id="tip" inputmode="decimal" placeholder="0"></div>
+        <div class="field"><label class="label" for="date">Date</label><input id="date" type="date"></div>
+      </div>
+      <div class="field">
+        <span class="label">Paid with</span>
+        <div class="chips" id="payChips"></div>
+      </div>
+      <div class="field">
+        <label class="label" for="note">Note (optional)</label>
+        <input id="note" placeholder="e.g. low taper, #2 on sides">
+      </div>
+      <div class="err" id="formErr" hidden></div>
+      <div class="row">
+        <button class="btn primary" type="submit" id="saveBtn">Add cut</button>
+        <button class="btn" type="button" id="cancelBtn" hidden>Cancel</button>
+      </div>
+    </form>
+
+    <div class="banner" id="sampleBanner" hidden>
+      <span>These are example cuts so you can see how it works. They disappear when you add your first one.</span>
+      <button class="btn small" type="button" id="clearSamples">Clear examples</button>
+    </div>
+    <div id="log" style="display:flex;flex-direction:column;gap:18px"></div>
+  </section>
+
+  <!-- CLIENTS TAB -->
+  <section id="tab-clients" hidden>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h2>Clients</h2>
+      <input id="clientSearch" placeholder="Search clients" autocomplete="off">
+      <div id="clients"></div>
+    </div>
+  </section>
+
+  <!-- MONEY TAB -->
+  <section id="tab-money" hidden>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div class="card">
+        <h2>Monthly goal</h2>
+        <div class="row" style="align-items:flex-end">
+          <div class="field"><label class="label" for="goal">Goal $</label><input id="goal" inputmode="decimal"></div>
+          <button class="btn" type="button" id="saveGoal">Save goal</button>
+        </div>
+        <div class="bar"><i id="goalBar"></i></div>
+        <div id="goalText" class="num"></div>
+      </div>
+      <div class="card">
+        <h2 id="monthTitle">This month</h2>
+        <div id="monthBreak"></div>
+      </div>
+      <div class="card">
+        <h2>By year</h2>
+        <div id="yearBreak"></div>
+      </div>
+      <div class="card">
+        <h2>Backup</h2>
+        <p class="sub">Your cuts are saved on this phone only. Copy a backup now and then and paste it into your notes, so you can restore it if you switch phones or clear your browser.</p>
+        <div class="row">
+          <button class="btn" type="button" id="copyBackup">Copy backup</button>
+          <button class="btn" type="button" id="restoreBtn">Restore from pasted backup</button>
+        </div>
+        <textarea id="backupBox" placeholder="Backup text shows up here. To restore, paste a backup here and tap Restore."></textarea>
+        <div id="backupMsg" class="sub"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
+
+<nav><div>
+  <button type="button" data-tab="cuts">Cuts</button>
+  <button type="button" data-tab="clients">Clients</button>
+  <button type="button" data-tab="money">Money</button>
+</div></nav>
+
+<script>
+(function(){
+  var KEY='dylan-cut-log-v1';
+  var SERVICES=['Haircut','Fade','Cut + Beard','Beard','Kids cut','Lineup','Other'];
+  var PAYS=['Cash','Venmo','Zelle','Cash App','Card'];
+  var $=function(id){return document.getElementById(id)};
+  var esc=function(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  var money=function(n){return '$'+(Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2})};
+  var iso=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+  var parse=function(s){var p=s.split('-');return new Date(+p[0],p[1]-1,+p[2])};
+  var today=function(){return iso(new Date())};
+  var addDays=function(n){var d=new Date();d.setDate(d.getDate()+n);return iso(d)};
+  var uid=function(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)};
+  var total=function(c){return (c.price||0)+(c.tip||0)};
+
+  function samples(){
+    return [
+      {id:uid(),date:today(),client:'Example: Mike R.',service:'Fade',price:35,tip:10,pay:'Venmo',note:'Mid fade, #1.5',sample:true},
+      {id:uid(),date:today(),client:'Example: Chris D.',service:'Cut + Beard',price:45,tip:5,pay:'Cash',note:'',sample:true},
+      {id:uid(),date:addDays(-1),client:'Example: Jay P.',service:'Haircut',price:30,tip:5,pay:'Cash',note:'',sample:true},
+      {id:uid(),date:addDays(-1),client:'Example: Mike R.',service:'Lineup',price:15,tip:0,pay:'Zelle',note:'',sample:true}
+    ];
+  }
+  var state={cuts:[],goal:2000,prices:{},started:false};
+  var memoryOnly=false;
+  function load(){
+    try{var raw=localStorage.getItem(KEY); if(raw){var s=JSON.parse(raw); if(s&&Array.isArray(s.cuts)) state=Object.assign(state,s);}}
+    catch(e){memoryOnly=true}
+    if(!state.started && !state.cuts.length) state.cuts=samples();
+  }
+  function save(){ try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){memoryOnly=true} }
+
+  var form={service:'Haircut',pay:'Cash',editId:null};
+
+  function chips(el,list,cur,on){
+    el.innerHTML=list.map(function(x){return '<button type="button" class="chip" aria-pressed="'+(x===cur)+'" data-v="'+esc(x)+'">'+esc(x)+'</button>'}).join('');
+    el.onclick=function(e){var b=e.target.closest('.chip'); if(b) on(b.dataset.v)};
+  }
+  function renderForm(){
+    chips($('svcChips'),SERVICES,form.service,function(v){
+      form.service=v;
+      if(!form.editId && state.prices[v]!=null) $('price').value=state.prices[v];
+      renderForm();
+    });
+    chips($('payChips'),PAYS,form.pay,function(v){form.pay=v;renderForm()});
+    $('formTitle').textContent=form.editId?'Edit cut':'Add a cut';
+    $('saveBtn').textContent=form.editId?'Save changes':'Add cut';
+    $('cancelBtn').hidden=!form.editId;
+  }
+  function resetForm(){
+    form.editId=null;
+    $('client').value='';$('tip').value='';$('note').value='';$('date').value=today();
+    $('price').value=state.prices[form.service]!=null?state.prices[form.service]:'';
+    $('formErr').hidden=true;
+    renderForm();
+  }
+  var numVal=function(id){var v=parseFloat(String($(id).value).replace(/[^0-9.]/g,''));return isNaN(v)?0:v};
+
+  $('cutForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var client=$('client').value.trim(), err=$('formErr');
+    if(!client){err.textContent='Add the client\'s name.';err.hidden=false;$('client').focus();return}
+    if(!$('price').value.trim()){err.textContent='Add the price. Enter 0 if it was free.';err.hidden=false;$('price').focus();return}
+    var cut={client:client,service:form.service,price:numVal('price'),tip:numVal('tip'),pay:form.pay,note:$('note').value.trim(),date:$('date').value||today()};
+    state.prices[form.service]=cut.price;
+    if(form.editId){
+      var i=state.cuts.findIndex(function(c){return c.id===form.editId});
+      if(i>-1) state.cuts[i]=Object.assign({id:form.editId},cut);
+      toast('Cut updated');
+    }else{
+      state.cuts=state.cuts.filter(function(c){return !c.sample});
+      state.started=true;
+      cut.id=uid(); state.cuts.push(cut);
+      toast('Cut added: '+money(total(cut)));
+    }
+    save(); resetForm(); render();
+  });
+  $('cancelBtn').onclick=resetForm;
+  $('clearSamples').onclick=function(){state.cuts=state.cuts.filter(function(c){return !c.sample});state.started=true;save();render()};
+
+  var sum=function(list){return list.reduce(function(a,c){return a+total(c)},0)};
+  function ranges(){
+    var t=today(), d=new Date(); d.setDate(d.getDate()-d.getDay()); var wk=iso(d), mo=t.slice(0,7);
+    return {
+      day:state.cuts.filter(function(c){return c.date===t}),
+      week:state.cuts.filter(function(c){return c.date>=wk&&c.date<=t}),
+      month:state.cuts.filter(function(c){return c.date.slice(0,7)===mo})
+    };
+  }
+  function dayLabel(s){
+    if(s===today()) return 'Today';
+    if(s===addDays(-1)) return 'Yesterday';
+    return parse(s).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:parse(s).getFullYear()===new Date().getFullYear()?undefined:'numeric'});
+  }
+
+  function render(){
+    var r=ranges();
+    $('todayLine').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})+(memoryOnly?' · Saving is blocked in this browser':'');
+    $('stats').innerHTML=[['Today',r.day],['This week',r.week],['This month',r.month]].map(function(x){
+      return '<div class="stat"><span class="label">'+x[0]+'</span><b class="num">'+money(sum(x[1]))+'</b><span class="c num">'+x[1].length+(x[1].length===1?' cut':' cuts')+'</span></div>';
+    }).join('');
+    $('sampleBanner').hidden=!state.cuts.some(function(c){return c.sample});
+
+    // log
+    var byDay={};
+    state.cuts.forEach(function(c){(byDay[c.date]=byDay[c.date]||[]).push(c)});
+    var days=Object.keys(byDay).sort().reverse();
+    $('log').innerHTML=days.length?days.map(function(d){
+      var list=byDay[d].slice().reverse();
+      return '<div class="day"><div class="dayhead"><h2>'+dayLabel(d)+'</h2><span class="num">'+list.length+(list.length===1?' cut':' cuts')+' · '+money(sum(list))+'</span></div><div class="list">'+
+        list.map(function(c){
+          return '<div class="item"><div class="main"><div class="who">'+esc(c.client)+'</div><div class="meta">'+esc(c.service)+' · '+esc(c.pay)+(c.note?' · '+esc(c.note):'')+'</div></div>'+
+          '<div class="amt num">'+money(c.price)+(c.tip?'<small>+'+money(c.tip)+' tip</small>':'')+'</div>'+
+          '<button class="icon" type="button" data-edit="'+c.id+'">Edit</button><button class="icon" type="button" data-del="'+c.id+'" aria-label="Delete cut">✕</button></div>';
+        }).join('')+'</div></div>';
+    }).join(''):'<div class="empty">No cuts logged yet. Add your first one above.</div>';
+
+    // clients
+    var map={};
+    state.cuts.forEach(function(c){var k=c.client.toLowerCase();var m=map[k]=map[k]||{name:c.client,n:0,t:0,last:''};m.n++;m.t+=total(c);if(c.date>m.last)m.last=c.date});
+    var all=Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return b.last.localeCompare(a.last)});
+    $('clientList').innerHTML=all.filter(function(m){return m.name.indexOf('Example:')!==0}).map(function(m){return '<option value="'+esc(m.name)+'">'}).join('');
+    var q=$('clientSearch').value.trim().toLowerCase();
+    var shown=all.filter(function(m){return m.name.toLowerCase().indexOf(q)>-1});
+    $('clients').innerHTML=shown.length?'<div class="list">'+shown.map(function(m){
+      return '<div class="item"><div class="main"><div class="who">'+esc(m.name)+'</div><div class="meta">'+m.n+(m.n===1?' visit':' visits')+' · last '+dayLabel(m.last)+'</div></div><div class="amt num">'+money(m.t)+'</div></div>';
+    }).join('')+'</div>':'<div class="empty">'+(q?'No client matches that search.':'Clients show up here after you log a cut.')+'</div>';
+
+    // money
+    var m=r.month, got=sum(m), goal=state.goal||0;
+    if(document.activeElement!==$('goal')) $('goal').value=goal;
+    $('goalBar').style.width=(goal?Math.min(100,got/goal*100):0)+'%';
+    $('goalText').textContent=goal?(got>=goal?money(got)+' this month. Goal hit, '+money(got-goal)+' over.':money(got)+' of '+money(goal)+' this month. '+money(goal-got)+' to go.'):'Set a goal to track it.';
+    $('monthTitle').textContent=new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    var tips=m.reduce(function(a,c){return a+(c.tip||0)},0);
+    var rows=[['Cuts',m.length],['Service money',money(got-tips)],['Tips',money(tips)],['Average per cut',m.length?money(got/m.length):'$0']];
+    PAYS.forEach(function(p){var l=m.filter(function(c){return c.pay===p}); if(l.length) rows.push([p,money(sum(l))])});
+    $('monthBreak').innerHTML=rows.map(function(x){return '<div class="kv"><span>'+x[0]+'</span><b class="num">'+x[1]+'</b></div>'}).join('');
+    var yrs={};
+    state.cuts.forEach(function(c){var y=c.date.slice(0,4);yrs[y]=yrs[y]||{n:0,t:0};yrs[y].n++;yrs[y].t+=total(c)});
+    var yk=Object.keys(yrs).sort().reverse();
+    $('yearBreak').innerHTML=yk.length?yk.map(function(y){return '<div class="kv"><span>'+y+' · '+yrs[y].n+' cuts</span><b class="num">'+money(yrs[y].t)+'</b></div>'}).join(''):'<div class="sub">Nothing logged yet.</div>';
+  }
+
+  // edit / delete with undo
+  var undoState=null, toastTimer=null;
+  function toast(msg,undo){
+    $('toastMsg').textContent=msg; $('toastUndo').hidden=!undo; undoState=undo||null; $('toast').hidden=false;
+    clearTimeout(toastTimer); toastTimer=setTimeout(function(){$('toast').hidden=true;undoState=null},undo?6000:2200);
+  }
+  $('toastUndo').onclick=function(){ if(undoState){state.cuts=undoState;save();render()} $('toast').hidden=true;undoState=null };
+  $('log').addEventListener('click',function(e){
+    var d=e.target.closest('[data-del]'), ed=e.target.closest('[data-edit]');
+    if(d){var prev=state.cuts.slice();state.cuts=state.cuts.filter(function(c){return c.id!==d.dataset.del});state.started=true;save();render();toast('Cut deleted',prev)}
+    if(ed){
+      var c=state.cuts.find(function(x){return x.id===ed.dataset.edit}); if(!c) return;
+      form.editId=c.id;form.service=c.service;form.pay=c.pay;
+      $('client').value=c.client;$('price').value=c.price;$('tip').value=c.tip||'';$('note').value=c.note||'';$('date').value=c.date;
+      renderForm(); $('cutForm').scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  });
+  $('clientSearch').addEventListener('input',render);
+  $('saveGoal').onclick=function(){state.goal=numVal('goal');save();render();toast('Goal saved')};
+
+  // backup
+  $('copyBackup').onclick=function(){
+    var txt=JSON.stringify({cuts:state.cuts.filter(function(c){return !c.sample}),goal:state.goal,prices:state.prices});
+    $('backupBox').value=txt;
+    var done=function(ok){$('backupMsg').textContent=ok?'Backup copied. Paste it into your notes app.':'Backup is in the box above. Select all of it and copy.';$('backupBox').select()};
+    try{navigator.clipboard.writeText(txt).then(function(){done(true)},function(){done(false)})}catch(e){done(false)}
+  };
+  $('restoreBtn').onclick=function(){
+    try{
+      var s=JSON.parse($('backupBox').value);
+      if(!s||!Array.isArray(s.cuts)) throw 0;
+      var prev=state.cuts.slice();
+      state.cuts=s.cuts.filter(function(c){return c&&c.date&&c.client}).map(function(c){c.id=c.id||uid();return c});
+      if(s.goal!=null) state.goal=+s.goal||0; if(s.prices) state.prices=s.prices; state.started=true;
+      save();render();$('backupMsg').textContent='Restored '+state.cuts.length+' cuts.';toast('Backup restored',prev);
+    }catch(e){$('backupMsg').textContent='That doesn\'t look like a backup. Paste the full backup text into the box, then tap Restore.'}
+  };
+
+  // tabs
+  function show(tab){
+    if(['cuts','clients','money'].indexOf(tab)<0) tab='cuts';
+    $('tab-cuts').hidden=tab!=='cuts';$('tab-clients').hidden=tab!=='clients';$('tab-money').hidden=tab!=='money';
+    document.querySelectorAll('nav button').forEach(function(b){if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+    window.scrollTo(0,0);
+  }
+  document.querySelector('nav').addEventListener('click',function(e){var b=e.target.closest('button');if(b){show(b.dataset.tab);try{history.replaceState(null,'','#'+b.dataset.tab)}catch(e){}}});
+
+  load(); resetForm(); render(); show((location.hash||'').slice(1));
+})();
+</script>
+
+</body>
+</html>
